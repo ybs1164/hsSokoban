@@ -1,1 +1,3 @@
 # hsSokoban
+
+sokoban in haskell
