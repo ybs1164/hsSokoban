@@ -5,6 +5,7 @@ import Data.List (groupBy)
 import Data.Map (Map)
 import qualified Data.Map as Map
 
+
 data Object = Empty | Wall | Rock | Goal | Player
     deriving (Eq, Show)
 
@@ -12,103 +13,139 @@ data Look = W | A | S | D
 
 type Pos = (Int, Int)
 
-type Stage = Map Pos [Object]
+type Tile = [Object]
+
+type Stage = Map Pos Tile
 
 
-getObjectEmoji :: [Object] -> String
-getObjectEmoji [] = "⬜"
-getObjectEmoji (object:objects) = case object of
+getTileEmoji :: Tile -> String
+getTileEmoji [] = "⬜"
+getTileEmoji (tile:tiles) = case tile of
     Empty  -> "⬜"
     Wall   -> "⬛"
     Goal   -> "💚"
     Player -> "️😎"
     Rock   -> "🔷"
 
-getStringObject :: Char -> [Object]
-getStringObject s = case s of
+getCharTile :: Char -> Tile
+getCharTile c = case c of
     'w' -> [Wall]
     'r' -> [Rock]
     'g' -> [Goal]
     'p' -> [Player]
     _   -> []
 
+getCharLook :: Char -> Look
+getCharLook c = case c of
+    'w' -> W
+    'a' -> A
+    's' -> S
+    'd' -> D
+    _   -> D
+
+getStageString :: Stage -> String
+getStageString stage =
+    concatMap
+        (\column -> concatMap (getTileEmoji . snd) column ++ "\n") $
+        groupBy (\x y -> (fst . fst) x == (fst . fst) y) $
+        Map.toList stage
+
+getLookingTiles :: Pos -> Look -> Stage -> [Tile]
+getLookingTiles pos look stage =
+    map (\(Just a) -> a) $
+        takeWhile (not . isWall) $
+        map (`Map.lookup` stage) $
+        getLooking pos look
+    where
+        isWall (Just objects) = Wall `elem` objects
+        isWall Nothing  = True
+
+getLooking :: Pos -> Look -> [Pos]
+getLooking (x, y) look = let (dx, dy) = getLookVector look in
+    zip [x, x+dx..] [y, y+dy..]
+
+getLookVector :: Look -> (Int, Int)
+getLookVector look = case look of
+    W -> (-1, 0)
+    A -> (0, -1)
+    S -> (1, 0)
+    D -> (0, 1)
+
 
 readStage :: FilePath -> IO Stage
 readStage name = do
     handle <- openFile ("stages/" ++ name ++ ".txt") ReadMode
     contents <- hGetContents handle
-    return $ Map.fromList $ indexing $ map (map getStringObject) $ words contents
+    return $ Map.fromList $ indexing $ map (map getCharTile) $ words contents
     where
-    indexing xss = 
+    indexing xss =
         zip [(x, y-1) | x <- [0..], y <- [1..length $ head xss]] (concat xss)
-
-getStageString :: Stage -> String
-getStageString stage =
-    concatMap
-        (\column -> concatMap (getObjectEmoji . snd) column ++ "\n") $
-        groupBy (\x y -> (fst . fst) x == (fst . fst) y) $
-        Map.toList stage
 
 printStage :: Stage -> IO ()
 printStage = putStr . getStageString
 
-getLookVector :: Look -> (Int, Int)
-getLookVector look = case look of
-    W    -> (-1, 0)
-    A  -> (0, -1)
-    S  -> (1, 0)
-    D -> (0, 1)
+finishStage :: Stage -> Bool
+finishStage =
+    (== Map.empty) . Map.filterWithKey checkAloneRock
+    where
+        checkAloneRock _ v = Rock `elem` v && Goal `notElem` v
+
 
 findPlayer :: Stage -> Pos
-findPlayer stage = let list_stage = Map.toList stage in
-    (fst . head) (filter (\((x, y), obj:_) -> obj == Player) list_stage)
+findPlayer stage =
+    (fst . head) (filter (\(_, objects) -> Player `elem` objects) (Map.toList stage))
 
-
-getObjectsLooking :: Pos -> Look -> Stage -> [(Pos, [Object])]
-getObjectsLooking (x, y) look stage = let (dx, dy) = getLookVector look in
-    zip (zip [x, x+dx..] [y, y+dy..]) $
-        map (\(Just a) -> a) $
-        takeWhile (not . isWall) $ 
-        zipWith (curry (`Map.lookup` stage)) [x, x+dx..] [y, y+dy..]
+moveTiles :: [Tile] -> [Tile]
+moveTiles [] = []
+moveTiles [x] = [x]
+moveTiles (x:y:zs) =
+    if not (any isPush y) then
+        filter (not . isPush) x : (filter isPush x ++ y) : zs
+        else let (tile:tiles) = moveTiles (y:zs) in
+            filter (not . isPush) x : (filter isPush x ++ tile) : tiles
     where
-        isWall (Just objects) = Wall `elem` objects
-        isWall Nothing  = True
-
-
-canMove :: Pos -> Look -> Stage -> Bool
-canMove pos look =
-    elem [] . map snd . getObjectsLooking pos look
-
-
--- todo : finish this function
-pushObjects :: [(Pos, [Object])] -> [(Pos, [Object])]
-pushObjects [] = []
-pushObjects [x] = [x]
-pushObjects (x:y:zs) =
-    if isAllStand (snd y) then
-        (fst y, snd x ++ snd y):zs
-        else let tiles = pushObjects (y:zs) in
-            if null tiles then
-                []
-                else (fst y, snd (head tiles) ++ snd y) : tail tiles
-    -- foldr (\((_, objects), (pos, prev)) ls -> (pos, objects ++ prev): ls) [head lives]
-    where
-        isAllStand [] = True
-        isAllStand xs = (not . any isPush) xs
         isPush Rock = True
-        isPush _ = False
+        isPush _    = False
 
+canMove :: [Tile] -> Bool
+canMove = not . all (any isPush)
+    where
+        isPush Rock = True
+        isPush _    = False
+
+movePlayer :: Tile -> [Tile] -> [Tile]
+movePlayer p []    = [p]
+movePlayer p tiles =
+    if (not . canMove) tiles then
+        p:tiles
+        else let (t:ts) = moveTiles tiles in
+        filter (not . isPlayer) p : (filter isPlayer p ++ t) : ts
+    where
+        isPlayer Player = True
+        isPlayer _      = False
 
 move :: Look -> Stage -> Stage
-move look stage = let pos = findPlayer stage in
-    if canMove pos look stage then
-        let lookingObjects = getObjectsLooking pos look stage;
-            positionObjects = ((0, 0), []): lookingObjects;
-            movementList = reverse (zip positionObjects (tail positionObjects)) in
-            foldr (\((_, objects), (pos, _)) s -> Map.insert pos objects s) stage movementList
-        else stage
+move look stage = let pos = findPlayer stage;
+                      (player: tiles) = getLookingTiles pos look stage in
+    foldr (uncurry Map.insert) stage (zip (getLooking pos look) $ movePlayer player tiles)
+
+
+game :: Stage -> IO ()
+game stage = do
+    printStage stage
+    if finishStage stage then
+        putStrLn "You win!"
+        else do
+        (dir:_) <- getLine
+        if dir == 'q' then
+            return ()
+            else do
+                let look = getCharLook dir
+                game $ move look stage
 
 
 main :: IO ()
-main = putStrLn "Hello, Haskell!"
+main = do
+    stage1 <- readStage "stage1"
+    game stage1
 
