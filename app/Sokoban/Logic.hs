@@ -33,9 +33,8 @@ findPlayer stage =
 moveTiles :: [Tile] -> [Tile]
 moveTiles [] = []
 moveTiles [x] = [x]
-moveTiles (x:y:zs)
-  | not (any isPush x) =
-        x:y:zs
+moveTiles xs@(x:y:zs)
+  | not (any isPush x) = xs
   | not (any isPush y) =
         filter (not . isPush) x : (filter isPush x ++ y) : zs
   | otherwise = let (tile:tiles) = moveTiles (y:zs) in
