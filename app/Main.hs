@@ -3,6 +3,8 @@ module Main where
 import Sokoban.Data
 import Sokoban.Logic
 
+import Control.Monad (when)
+
 
 game stage = game' stage []
     where
@@ -10,7 +12,6 @@ game stage = game' stage []
         game' stage prev@(l:ls) = do
             printStage stage
             if finishStage stage then do
-                putStrLn "You win!"
                 return True
             else do
                 dir <- getChar
@@ -24,9 +25,14 @@ game stage = game' stage []
                             Just look -> game' (move look stage) (stage:prev)
                             Nothing -> game' stage prev
 
+gameStages :: [Stage] -> IO ()
+gameStages [] = putStrLn "You win!"
+gameStages (stage:stages) = do
+    clear <- game stage
+    when clear $ putStrLn "Next Stage" >> gameStages stages
+
 main :: IO ()
 main = do
-    stage2 <- readStage "stage2"
-    game stage2
-    return ()
+    stages <- mapM (readStage . ("stage" ++) . show) [1..10]
+    gameStages stages
 

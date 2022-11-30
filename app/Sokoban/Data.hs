@@ -86,7 +86,7 @@ readStage :: FilePath -> IO Stage
 readStage name = do
     handle <- openFile ("stages/" ++ name ++ ".txt") ReadMode
     contents <- hGetContents handle
-    return . Map.fromList . concat . indexing' . map (map getCharTile) $ lines contents
+    return . Map.fromList . concat . indexing' . map (map getCharTile) $ lines $ filter (/='\r') contents
     where
     indexing xss =
         zip [(x, y-1) | x <- [0..], y <- [1..length $ head xss]] (concat xss)
