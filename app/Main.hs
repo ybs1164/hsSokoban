@@ -3,23 +3,26 @@ module Main where
 import Sokoban.Data
 import Sokoban.Logic
 
+
 game stage = do
     printStage stage
-    if finishStage stage then
+    if finishStage stage then do
         putStrLn "You win!"
+        return True
     else do
         dir <- getChar
         putStr "\n"
         case dir of
             '\n' -> game stage
-            'q' -> return ()
+            'q' -> return False
             _   -> do
-                let look = getCharLook dir
-                game $ move look stage
-
+                case getCharLook dir of
+                    Just look -> game $ move look stage
+                    Nothing -> game stage
 
 main :: IO ()
 main = do
-    stage1 <- readStage "stage1"
-    game stage1
+    stage2 <- readStage "stage2"
+    game stage2
+    return ()
 

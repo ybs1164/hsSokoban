@@ -34,7 +34,7 @@ type Stage = Map Pos Tile
 getTileEmoji :: Tile -> String
 getTileEmoji [] = "⬜"
 getTileEmoji (tile:tiles) = case tile of
-    Empty  -> "⬜"
+    Empty  -> "  "
     Wall   -> "⬛"
     Goal   -> "💚"
     Player -> "️😎"
@@ -46,15 +46,26 @@ getCharTile c = case c of
     'r' -> [Rock]
     'g' -> [Goal]
     'p' -> [Player]
+    'R' -> [Rock, Goal]
+    'P' -> [Player, Goal]
+    ' ' -> [Empty]
     _   -> []
 
-getCharLook :: Char -> Look
+getCharLook :: Char -> Maybe Look
 getCharLook c = case c of
-    'w' -> W
-    'a' -> A
-    's' -> S
-    'd' -> D
-    _   -> D
+    'w' -> Just W
+    'k' -> Just W
+
+    'a' -> Just A
+    'h' -> Just A
+
+    's' -> Just S
+    'j' -> Just S
+    
+    'd' -> Just D
+    'l' -> Just D
+
+    _   -> Nothing
 
 getLookVector :: Look -> (Int, Int)
 getLookVector look = case look of
@@ -63,17 +74,6 @@ getLookVector look = case look of
     S -> (1, 0)
     D -> (0, 1)
 
-
-readStage :: FilePath -> IO Stage
-readStage name = do
-    handle <- openFile ("stages/" ++ name ++ ".txt") ReadMode
-    contents <- hGetContents handle
-    return $ Map.fromList $ indexing $ map (map getCharTile) $ words contents
-    where
-    indexing xss =
-        zip [(x, y-2) | x <- [0..], y <- [1..length $ head xss]] (concat xss)
-
-
 getStageString :: Stage -> String
 getStageString stage =
     concatMap
@@ -81,6 +81,18 @@ getStageString stage =
         groupBy (\x y -> (fst . fst) x == (fst . fst) y) $
         Map.toList stage
 
+
+readStage :: FilePath -> IO Stage
+readStage name = do
+    handle <- openFile ("stages/" ++ name ++ ".txt") ReadMode
+    contents <- hGetContents handle
+    return . Map.fromList . concat . indexing' . map (map getCharTile) $ lines contents
+    where
+    indexing xss =
+        zip [(x, y-1) | x <- [0..], y <- [1..length $ head xss]] (concat xss)
+    indexing' :: [[a]] -> [[((Int, Int), a)]]
+    indexing' =
+        zipWith (\row xs -> zipWith (\col x -> ((row, col), x)) [0..] xs) [0..]
 
 printStage :: Stage -> IO ()
 printStage = putStr . getStageString
