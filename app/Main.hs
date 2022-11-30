@@ -8,12 +8,14 @@ game stage = do
     if finishStage stage then
         putStrLn "You win!"
     else do
-        (dir:_) <- getLine
-        if dir == 'q' then
-            return ()
-        else do
-            let look = getCharLook dir
-            game $ move look stage
+        dir <- getChar
+        putStr "\n"
+        case dir of
+            '\n' -> game stage
+            'q' -> return ()
+            _   -> do
+                let look = getCharLook dir
+                game $ move look stage
 
 
 main :: IO ()
