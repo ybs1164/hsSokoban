@@ -6,5 +6,6 @@ sokoban in haskell
 
 wasd, khjl -> move
 u -> undo
+r -> reset
 q -> quit
 

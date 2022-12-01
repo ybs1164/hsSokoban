@@ -1,6 +1,6 @@
 module Sokoban.Logic where
 
-import Sokoban.Data ( 
+import Sokoban.Data (
     getLookVector
   , Look
   , Object(Player, Wall, Goal, Rock)
@@ -8,6 +8,7 @@ import Sokoban.Data (
   , Stage
   , Tile )
 
+import Data.Maybe ( catMaybes, isJust )
 import Data.Map (Map)
 import qualified Data.Map as Map
 
@@ -15,8 +16,10 @@ import qualified Data.Map as Map
 getLookingTiles :: Pos -> Look -> Stage -> [Tile]
 getLookingTiles pos look stage =
     takeWhile (not . any isWall)
-        [ tile | position <- getLooking pos look
-        , let Just tile = Map.lookup position stage ]
+    . catMaybes
+    . takeWhile isJust
+    . map (`Map.lookup` stage)
+    $ getLooking pos look
     where
         isWall Wall = True
         isWall _    = False
@@ -34,7 +37,7 @@ finishStage =
 
 findPlayer :: Stage -> Pos
 findPlayer stage =
-    fst . head . filter ((Player `elem`) . snd) 
+    fst . head . filter ((Player `elem`) . snd)
     $ Map.toList stage
 
 moveTiles :: [Tile] -> [Tile]
@@ -70,7 +73,7 @@ movePlayer p tiles =
 move :: Look -> Stage -> Stage
 move look stage = let pos = findPlayer stage
                       (player:tiles) = getLookingTiles pos look stage in
-    foldr (uncurry Map.insert) stage 
-    . zip (getLooking pos look) 
+    foldr (uncurry Map.insert) stage
+    . zip (getLooking pos look)
     $ movePlayer player tiles
-        
+

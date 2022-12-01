@@ -25,6 +25,7 @@ game stage = game' stage []
                 case dir of
                     '\n' -> game' stage prev
                     'u' -> game' l ls
+                    'r' -> game' (last prev) []
                     'q' -> return False
                     _   -> do
                         case getCharLook dir of
