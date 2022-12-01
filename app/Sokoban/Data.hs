@@ -88,8 +88,8 @@ readStage name = do
       . (map . map) getCharTile
       . lines $ filter (/='\r') contents
     where
-    indexing =
-        zipWith (\row xs -> zipWith (\col x -> ((row, col), x)) [0..] xs) [0..]
+        indexing =
+            zipWith (\row xs -> zipWith (\col x -> ((row, col), x)) [0..] xs) [0..]
 
 printStage :: Stage -> IO ()
 printStage = putStr . getStageString

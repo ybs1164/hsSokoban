@@ -27,10 +27,9 @@ game stage = game' stage []
                     'u' -> game' l ls
                     'r' -> game' (last prev) []
                     'q' -> return False
-                    _   -> do
-                        case getCharLook dir of
-                            Just look -> game' (move look stage) (stage:prev)
-                            Nothing -> game' stage prev
+                    _   -> case getCharLook dir of
+                        Just look -> game' (move look stage) (stage:prev)
+                        Nothing -> game' stage prev
 
 gameStages :: [Stage] -> IO ()
 gameStages [] = putStrLn "You win!"
