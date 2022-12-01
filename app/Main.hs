@@ -39,6 +39,6 @@ gameStages (stage:stages) = do
 
 main :: IO ()
 main = do
-    stages <- mapM (readStage . ("stage" ++) . show) [1..10]
+    stages <- mapM (readStage . ("stage" ++) . show . (+10)) [1..10]
     gameStages stages
 
