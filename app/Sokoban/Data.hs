@@ -4,11 +4,9 @@ module Sokoban.Data (
   , Pos
   , Tile
   , Stage
-  , getTileEmoji
   , getCharTile
   , getCharLook
   , getLookVector
-  , getStageString
   , readStage
   , printStage
 ) where
@@ -20,7 +18,7 @@ import qualified Data.Map as Map
 
 
 data Object = Empty | Wall | Rock | Goal | Player
-    deriving (Eq, Show)
+    deriving Eq
 
 data Look = W | A | S | D
 
@@ -76,22 +74,21 @@ getLookVector look = case look of
 
 getStageString :: Stage -> String
 getStageString stage =
-    concatMap
-        (\column -> concatMap (getTileEmoji . snd) column ++ "\n") $
-        groupBy (\x y -> (fst . fst) x == (fst . fst) y) $
-        Map.toList stage
+    concatMap ((++"\n") . concatMap (getTileEmoji . snd)) 
+    . groupBy (\x y -> (fst . fst) x == (fst . fst) y) 
+    $ Map.toList stage
 
 
 readStage :: FilePath -> IO Stage
 readStage name = do
     handle <- openFile ("stages/" ++ name ++ ".txt") ReadMode
     contents <- hGetContents handle
-    return . Map.fromList . concat . indexing' . map (map getCharTile) $ lines $ filter (/='\r') contents
+    return . Map.fromList 
+      . concat . indexing 
+      . (map . map) getCharTile
+      . lines $ filter (/='\r') contents
     where
-    indexing xss =
-        zip [(x, y-1) | x <- [0..], y <- [1..length $ head xss]] (concat xss)
-    indexing' :: [[a]] -> [[((Int, Int), a)]]
-    indexing' =
+    indexing =
         zipWith (\row xs -> zipWith (\col x -> ((row, col), x)) [0..] xs) [0..]
 
 printStage :: Stage -> IO ()

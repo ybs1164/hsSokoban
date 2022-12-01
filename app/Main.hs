@@ -1,7 +1,13 @@
 module Main where
 
-import Sokoban.Data
-import Sokoban.Logic
+import Sokoban.Data ( 
+    getCharLook
+  , printStage
+  , readStage
+  , Stage )
+import Sokoban.Logic ( 
+    finishStage
+  , move )
 
 import Control.Monad (when)
 
